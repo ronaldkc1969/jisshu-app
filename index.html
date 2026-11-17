@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ソーシャルワーク実習 統合管理システム</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --success-color: #28a745;
+            --admin-color: #6f42c1;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --border-radius: 10px;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif; background-color: var(--bg-color); margin: 0; padding: 15px; color: #333; font-size: 16px; line-height: 1.5; }
+        .container { max-width: 950px; margin: 0 auto; }
+        .card { background: var(--card-bg); padding: 25px; margin-bottom: 20px; border-radius: var(--border-radius); box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        h2 { font-size: 1.2rem; color: var(--primary-color); border-left: 5px solid var(--primary-color); padding-left: 10px; margin: 0 0 15px 0; }
+
+        .form-control { width: 100%; padding: 10px 12px; font-size: 16px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; margin-top: 5px; }
+        .form-control[readonly], .form-control:disabled { background-color: #f1f3f5; color: #495057; cursor: not-allowed; }
+        textarea.form-control { min-height: 240px; line-height: 1.6; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+
+        .btn { padding: 10px 18px; border-radius: 6px; border: none; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s; text-align: center; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-primary { background: var(--primary-color); color: white; width: 100%; }
+        .btn-success { background: var(--success-color); color: white; width: 100%; }
+        .btn-nav { background: #e9ecef; color: #495057; border: 1px solid #ced4da; }
+        .btn-nav.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .btn-eval-nav { background: #fd7e14; color: white; }
+        .btn-eval-nav.active { box-shadow: 0 0 0 3px rgba(253,126,20,0.4); }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+        .activity-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px; background: #fafafa; position: relative; }
+        .activity-header { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .remove-btn { position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border-radius: 50%; width: 24px; height: 24px; border: none; cursor: pointer; font-weight: bold; }
+
+        .rating-table { width: 100%; border-collapse: collapse; margin: 15px 0; background: white; font-size: 15px; }
+        .rating-table th, .rating-table td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
+        .rating-table th { background-color: #f1f3f5; width: 100px; text-align: center; }
+        .eval-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1f3f5; }
+        .radio-group { display: flex; gap: 12px; }
+        .score-label { font-size: 14px; text-align: center; cursor: pointer; }
+
+        .hidden { display: none !important; }
+        .date-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .date-item:hover { background: #f0f7ff; }
+        .tag { font-size: 12px; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .tag-student { background: #e3f2fd; color: #0d47a1; }
+        .tag-facility { background: #e8f5e9; color: #1b5e20; }
+        .tag-admin { background: #f3e8ff; color: #5b21b6; }
+        .readonly-banner { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; font-weight: bold; }
+
+        .admin-student-card { border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; }
+        .admin-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .activity-header { grid-template-columns: 1fr; }
+            .header-flex { flex-direction: column; gap: 10px; align-items: flex-start !important; }
+            .nav-group { width: 100%; display: flex; flex-wrap: wrap; gap: 5px; }
+            .eval-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div id="loginScreen" class="card" style="max-width: 420px; margin: 60px auto;">
+        <h2 style="border:none; text-align:center; padding:0; margin-bottom:20px;">実習支援システム ログイン</h2>
+        <form id="loginForm">
+            <div style="margin-bottom:15px;">
+                <label style="font-size:14px; font-weight:bold;">ID（学籍番号 / 施設ID / 管理者ID）</label>
+                <input type="text" id="loginId" class="form-control" placeholder="IDを入力" required>
+            </div>
+            <div style="margin-bottom:25px;">
+                <label style="font-size:14px; font-weight:bold;">パスワード</label>
+                <input type="password" id="loginPw" class="form-control" placeholder="パスワードを入力" required>
+            </div>
+            <button type="submit" id="loginBtn" class="btn btn-primary">ログイン</button>
+        </form>
+        <div id="loginError" style="color: #dc3545; text-align:center; font-size:14px; margin-top:12px; min-height:1.2em;"></div>
+    </div>
+
+    
+    <div id="appHeader" class="card hidden" style="padding:15px 20px;">
+        <div class="header-flex" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span id="roleBadge" class="tag"></span>
+                <strong id="userDisplay" style="margin-left:8px; font-size:16px;"></strong>
+                <span id="targetStudentDisplay" style="margin-left:10px; color:var(--primary-color); font-weight:bold;"></span>
+            </div>
+            <div class="nav-group" style="display:flex; gap:8px; align-items:center;">
+                <button id="navAdminSelectBtn" onclick="showScreen('adminSelectScreen')" class="btn btn-nav hidden">学生一覧（管理者）</button>
+                <button id="navStudentSelectBtn" onclick="showScreen('facilitySelectScreen')" class="btn btn-nav hidden">学生選択</button>
+                <button id="navJournalBtn" onclick="openJournalScreen()" class="btn btn-nav hidden">実習簿</button>
+                <button id="navReflectionBtn" onclick="openReflectionScreen()" class="btn btn-nav hidden">事後振り返り</button>
+                <button id="navEvalBtn" onclick="openEvaluationScreen()" class="btn btn-eval-nav hidden">実習評価 ➔</button>
+                <button onclick="location.reload()" class="btn btn-secondary" style="font-size:13px; padding:6px 12px;">ログアウト</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div id="facilitySelectScreen" class="card hidden">
+        <h2>確認する実習生を選択してください</h2>
+        <div id="studentSelectList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:15px; margin-top:15px;"></div>
+    </div>
+
+    
+    <div id="adminSelectScreen" class="card hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <h2 style="margin:0; border-color:var(--admin-color); color:var(--admin-color);">管理者ページ：実習生一覧（閲覧専用）</h2>
+            <input type="text" id="adminSearchInput" oninput="filterAdminStudents()" class="form-control" style="max-width:260px; margin:0;" placeholder="氏名または学籍番号で検索...">
+        </div>
+        <div id="adminStudentList" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:15px;"></div>
+    </div>
+
+    
+    <div id="journalApp" class="hidden">
+        <div id="journalReadonlyBanner" class="readonly-banner hidden">👁️ 閲覧専用モードで表示しています（編集・保存はできません）</div>
+        <div class="grid-2" id="journalTopGrid">
+            <div class="card" id="newJournalCard">
+                <h2>新規日誌作成</h2>
+                <input type="date" id="newDate" class="form-control">
+                <button type="button" onclick="createNewEntry()" class="btn btn-primary" style="margin-top:12px;">新規日誌を開く</button>
+            </div>
+            <div class="card" id="savedJournalCard">
+                <h2>登録済み実習日誌一覧</h2>
+                <div id="dateList" style="max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px;">読み込み中...</div>
+            </div>
+        </div>
+
+        <form id="journalForm" class="hidden">
+            <div class="card">
+                <h2>基本情報</h2>
+                <div class="grid-2">
+                    <div><label>実習日目</label><input type="number" id="practiceDay" class="form-control" required></div>
+                    <div><label>実習年月日</label><input type="date" id="practiceDate" class="form-control" readonly></div>
+                </div>
+                <div class="grid-2" style="margin-top:12px;">
+                    <div><label>出席時間</label><input type="time" id="attendanceTime" class="form-control"></div>
+                    <div><label>退出時間</label><input type="time" id="exitTime" class="form-control"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>本日の学習目標</h2>
+                <textarea id="learningGoals" class="form-control"></textarea>
+            </div>
+
+            <div class="card">
+                <h2>活動記録</h2>
+                <div id="activityContainer"></div>
+                <button type="button" id="addActivityBtn" onclick="addActivityRow()" class="btn btn-secondary" style="margin-top:10px;">＋ 記録行を追加</button>
+            </div>
+
+            <div class="card">
+                <h2>今日一日を振り返って</h2>
+                <textarea id="reflection" class="form-control" style="min-height:440px;"></textarea>
+            </div>
+
+            <div class="card">
+                <h2>明日への課題</h2>
+                <textarea id="tomorrowTasks" class="form-control"></textarea>
+            </div>
+
+            <div class="card" style="border: 2px solid #ced4da;">
+                <h2 style="color:#2b8a3e; border-color:#2b8a3e;">実習指導者からのコメント（施設入力欄）</h2>
+                <textarea id="instructorComment" class="form-control" placeholder="指導者コメント未入力" style="min-height:240px;"></textarea>
+            </div>
+
+            <div id="journalSaveArea" style="position: sticky; bottom: 15px; z-index: 10;">
+                <button type="submit" id="saveJournalBtn" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(0,0,0,0.2);">実習簿を保存・更新</button>
+            </div>
+        </form>
+    </div>
+
+    
+    <div id="reflectionApp" class="hidden">
+        <div id="reflectionReadonlyBanner" class="readonly-banner hidden">👁️ 閲覧専用モードで表示しています（編集・保存はできません）</div>
+        <form id="postReflectionForm">
+            <div class="card">
+                <h2>実習事後振り返りシート</h2>
+                <div style="margin-bottom:25px;">
+                    <label style="font-weight:bold; font-size:16px;">１．全体を振り返って</label>
+                    <textarea id="post_reflection_overall" class="form-control" style="min-height:520px;" placeholder="実習全体を通して学んだこと、印象に残った出来事、自身の成長や課題について具体的に記述してください。"></textarea>
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:bold; font-size:16px;">２．今回の経験をこれからどう活かすか</label>
+                    <textarea id="post_reflection_future" class="form-control" style="min-height:440px;" placeholder="大学での今後の学習、ゼミ活動、進路選択、国家試験対策や将来の対人援助実践にどう繋げていくかを記述してください。"></textarea>
+                </div>
+            </div>
+
+            <div id="reflectionSaveArea" style="position: sticky; bottom: 15px; z-index: 10;">
+                <button type="submit" id="saveReflectionBtn" class="btn btn-primary" style="box-shadow: 0 4px 12px rgba(0,0,0,0.2);">事後振り返りを保存・更新</button>
+            </div>
+        </form>
+    </div>
+
+    
+    <div id="evalApp" class="hidden">
+        <div id="evalReadonlyBanner" class="readonly-banner hidden">👁️ 閲覧専用モードで表示しています（編集・保存はできません）</div>
+        <form id="evaluationForm">
+            <div class="card">
+                <h2>実習施設・出席状況</h2>
+                <div class="grid-2">
+                    <div><label>種別</label><input type="text" id="info_type" class="form-control"></div>
+                    <div><label>設置主体名</label><input type="text" id="info_owner" class="form-control"></div>
+                </div>
+                <div style="margin-top:10px;"><label>施設・機関名</label><input type="text" id="info_facility" class="form-control"></div>
+                <div class="grid-2" style="margin-top:10px;">
+                    <div><label>代表者役職・氏名</label><input type="text" id="info_rep" class="form-control"></div>
+                    <div><label>実習指導者氏名</label><input type="text" id="info_mentor" class="form-control"></div>
+                </div>
+                <div class="grid-3" style="margin-top:15px; border-top:1px solid #eee; padding-top:12px;">
+                    <div><label>実習開始日</label><input type="date" id="period_start" class="form-control"></div>
+                    <div><label>実習終了日</label><input type="date" id="period_end" class="form-control"></div>
+                    <div><label>合計実習日数</label><input type="number" id="days_total" class="form-control"></div>
+                </div>
+                <div class="grid-2" style="margin-top:10px;">
+                    <div><label>欠席日数</label><input type="number" id="days_absent" class="form-control" value="0"></div>
+                    <div><label>遅刻・早退日数</label><input type="number" id="days_late" class="form-control" value="0"></div>
+                </div>
+                <div style="margin-top:12px;">
+                    <label>形態：</label>
+                    <label><input type="radio" name="stay_type" value="通い" checked> 通い</label>
+                    <label style="margin-left:15px;"><input type="radio" name="stay_type" value="宿泊"> 宿泊</label>
+                </div>
+            </div>
+
+            <div class="card" style="background:#fff9db; border:1px solid #ffe066;">
+                <h3 style="margin-top:0; color:#d9480f;">評価基準</h3>
+                <table class="rating-table">
+                    <tr><th>５</th><td>大変よい</td><th>２</th><td>努力を要する</td></tr>
+                    <tr><th>４</th><td>よい</td><th>１</th><td>かなり努力を要する</td></tr>
+                    <tr><th>３</th><td>ふつう</td><th>非該当</th><td>実習内容に含まれていない</td></tr>
+                </table>
+            </div>
+
+            <div id="evalSectionsContainer"></div>
+
+            <div class="card">
+                <h2>Ｅ 総合評価</h2>
+                <div class="radio-group" id="group-E" style="justify-content: space-around; padding: 10px 0;"></div>
+            </div>
+
+            <div class="card">
+                <h2>所見・アドバイス</h2>
+                <div style="margin-bottom:15px;">
+                    <label>Ｆ．実習生に関する総評</label>
+                    <textarea id="comment-F" class="form-control" style="min-height:240px;"></textarea>
+                </div>
+                <div>
+                    <label>Ｇ．実習生へのアドバイス（長所・短所・今後の課題等）</label>
+                    <textarea id="comment-G" class="form-control" style="min-height:240px;"></textarea>
+                </div>
+            </div>
+
+            <div id="evalSaveArea" style="position: sticky; bottom: 15px; z-index: 10;">
+                <button type="submit" id="saveEvalBtn" class="btn btn-success" style="box-shadow: 0 4px 12px rgba(0,0,0,0.2);">評価表を保存・更新する</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzeju3Z6OTncx_9HZbFPOECYHgJ3Ed4Co6Igec_4815NoS9VuqRbgfaRQCyHjLh3NGWbw/exec";
+
+    let currentUser = null;   
+    let activeStudent = null;
+    let allStudentsList = [];
+    let knownDates = [];
+
+    const evalConfig = {
+        'Ａ 基本的知識の理解・習得の状況': {
+            prefix: 'A', items: [
+                '① 施設・機関の利用者及びその生活課題・ニーズに関する理解',
+                '② 実習した職種の業務内容に関する理解',
+                '③ 実習施設・機関の機構・機能（法的根拠・目的等）に対する理解',
+                '④ 実習施設・機関に関連する他施設・制度・社会資源に関する理解'
+            ]
+        },
+        'Ｂ 基本的技術・技能の習得の状況': {
+            prefix: 'B', items: [
+                '① 利用者に対して共感的・理解的に接する技能',
+                '② 実習施設・機関の基本的技術（面接、観察、ケア等）の習得',
+                '③ 実習日誌や各種記録を的確に作成する能力'
+            ]
+        },
+        'Ｃ 実習態度の状況': {
+            prefix: 'C', items: [
+                '① 規則の遵守（出退勤、注意事項、マナー、服装、言葉遣い等）',
+                '② 実習職種の職務を習得しようとする意欲、積極性',
+                '③ 利用者に積極的に関わろうとする態度',
+                '④ 利用者の人権・人格を尊重しようとする態度',
+                '⑤ 実習指導者の指導・助言を積極的に求めようとする態度',
+                '⑥ 実習現場における他職種、他職員と協働しようとする態度'
+            ]
+        },
+        'Ｄ 実習を通した変容': {
+            prefix: 'D', items: [
+                '① 各自の実習目標（実習計画書、本日の学習目標）の達成度',
+                '② 利用者とそのニーズに対する理解や援助関係を深めた',
+                '③ 実践現場に関する理解を深めた',
+                '④ 実践技術・技能を深めた',
+                '⑤ 自己理解を深めた'
+            ]
+        }
+    };
+
+    const val = (v) => (v === undefined || v === null) ? "" : v;
+    
+    const esc = (s) => String(val(s)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+    
+    async function callGAS(payload) {
+        if (currentUser && currentUser.token) payload.token = currentUser.token;
+        const res = await fetch(GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json && json.code === "AUTH" && payload.action !== "login") {
+            alert(json.message || "セッションが切れました。再度ログインしてください。");
+            location.reload();
+        }
+        return json;
+    }
+
+    
+    function ensureOk(res) {
+        if (!res || !res.success) throw new Error((res && (res.message || res.error)) || "");
+    }
+
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('loginId').value.trim();
+        const pw = document.getElementById('loginPw').value.trim();
+        const errDiv = document.getElementById('loginError');
+        const btn = document.getElementById('loginBtn');
+
+        btn.disabled = true; btn.innerText = "認証中..."; errDiv.innerText = "";
+
+        try {
+            const res = await callGAS({ action: "login", id, password: pw });
+            if (res.success) {
+                currentUser = { id: res.userId, name: res.userName, role: res.role, token: res.token };
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appHeader').classList.remove('hidden');
+
+                if (currentUser.role === 'admin') {
+                    document.getElementById('userDisplay').innerText = `${currentUser.name}（管理者）`;
+                    document.getElementById('roleBadge').innerText = "管理者";
+                    document.getElementById('roleBadge').className = "tag tag-admin";
+                    document.getElementById('navAdminSelectBtn').classList.remove('hidden');
+                    allStudentsList = res.allStudents || [];
+                    renderAdminStudentList(allStudentsList);
+                    showScreen('adminSelectScreen');
+
+                } else if (currentUser.role === 'facility') {
+                    document.getElementById('userDisplay').innerText = `${currentUser.name} 様`;
+                    document.getElementById('roleBadge').innerText = "実習施設";
+                    document.getElementById('roleBadge').className = "tag tag-facility";
+                    document.getElementById('navStudentSelectBtn').classList.remove('hidden');
+                    loadFacilityStudentList(res.assignedStudents);
+
+                } else {
+                    
+                    document.getElementById('userDisplay').innerText = currentUser.name;
+                    document.getElementById('roleBadge').innerText = "実習生";
+                    document.getElementById('roleBadge').className = "tag tag-student";
+                    activeStudent = { id: currentUser.id, name: currentUser.name };
+                    document.getElementById('navJournalBtn').classList.remove('hidden');
+                    document.getElementById('navReflectionBtn').classList.remove('hidden');
+                    setupStudentView();
+                }
+            } else {
+                errDiv.innerText = res.message || "IDまたはパスワードが正しくありません";
+            }
+        } catch (e) {
+            errDiv.innerText = "通信エラーが発生しました。GASのデプロイURLとアクセス権限を確認してください。";
+        } finally {
+            btn.disabled = false; btn.innerText = "ログイン";
+        }
+    });
+
+    
+    function renderAdminStudentList(students) {
+        const listDiv = document.getElementById('adminStudentList');
+        listDiv.innerHTML = "";
+        if (!students || students.length === 0) {
+            listDiv.innerHTML = "<p>該当する実習生が登録されていません。</p>";
+            return;
+        }
+        students.forEach(st => {
+            const card = document.createElement('div');
+            card.className = "admin-student-card";
+            card.innerHTML = `
+                <div>
+                    <div style="font-size:13px; color:#666;">学籍番号: ${esc(st.id)}</div>
+                    <strong style="font-size:17px;">${esc(st.name)}</strong>
+                </div>
+                <div class="admin-btn-group">
+                    <button type="button" class="btn btn-primary btn-sm" data-tab="journal">実習簿</button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="background:#17a2b8;" data-tab="reflection">振り返り</button>
+                    <button type="button" class="btn btn-eval-nav btn-sm" data-tab="eval">評価</button>
+                </div>
+            `;
+            card.querySelectorAll('button[data-tab]').forEach(b => {
+                b.addEventListener('click', () => adminJumpTo(st.id, st.name, b.dataset.tab));
+            });
+            listDiv.appendChild(card);
+        });
+    }
+
+    function filterAdminStudents() {
+        const q = document.getElementById('adminSearchInput').value.trim().toLowerCase();
+        const filtered = allStudentsList.filter(st =>
+            String(st.id).toLowerCase().includes(q) || String(st.name).toLowerCase().includes(q)
+        );
+        renderAdminStudentList(filtered);
+    }
+
+    function adminJumpTo(studentId, studentName, targetTab) {
+        activeStudent = { id: studentId, name: studentName };
+        document.getElementById('targetStudentDisplay').innerText = `【閲覧中: ${studentName} (${studentId})】`;
+
+        document.getElementById('navJournalBtn').classList.remove('hidden');
+        document.getElementById('navReflectionBtn').classList.remove('hidden');
+        document.getElementById('navEvalBtn').classList.remove('hidden');
+
+        setupAdminReadonlyView();
+        document.getElementById('journalForm').classList.add('hidden');
+
+        if (targetTab === 'journal') openJournalScreen();
+        else if (targetTab === 'reflection') openReflectionScreen();
+        else if (targetTab === 'eval') openEvaluationScreen();
+    }
+
+    function setupAdminReadonlyView() {
+        document.getElementById('journalReadonlyBanner').classList.remove('hidden');
+        document.getElementById('reflectionReadonlyBanner').classList.remove('hidden');
+        document.getElementById('evalReadonlyBanner').classList.remove('hidden');
+
+        document.getElementById('newJournalCard').classList.add('hidden');
+        document.getElementById('journalTopGrid').style.gridTemplateColumns = "1fr";
+        document.getElementById('journalSaveArea').classList.add('hidden');
+        document.getElementById('addActivityBtn').classList.add('hidden');
+        document.getElementById('journalForm').classList.add('hidden');
+
+        ['practiceDay', 'attendanceTime', 'exitTime', 'learningGoals', 'reflection', 'tomorrowTasks', 'instructorComment'].forEach(id => {
+            document.getElementById(id).readOnly = true;
+        });
+
+        document.getElementById('post_reflection_overall').readOnly = true;
+        document.getElementById('post_reflection_future').readOnly = true;
+        document.getElementById('reflectionSaveArea').classList.add('hidden');
+
+        document.getElementById('evalSaveArea').classList.add('hidden');
+        document.querySelectorAll('#evaluationForm input, #evaluationForm textarea').forEach(el => {
+            if (el.type === 'radio') el.disabled = true;
+            else el.readOnly = true;
+        });
+    }
+
+    function loadFacilityStudentList(students) {
+        showScreen('facilitySelectScreen');
+        const listDiv = document.getElementById('studentSelectList');
+        listDiv.innerHTML = "";
+
+        if (!students || students.length === 0) {
+            listDiv.innerHTML = "<p>担当の実習生が登録されていません（assignmentsシートを確認してください）。</p>";
+            return;
+        }
+
+        students.forEach(st => {
+            const card = document.createElement('div');
+            card.className = "card";
+            card.style.cssText = "margin-bottom:0; cursor:pointer; border:1px solid #ced4da; text-align:center; padding:15px;";
+            card.innerHTML = `<strong>${esc(st.name)}</strong><br><span style="font-size:13px; color:#666;">学籍番号: ${esc(st.id)}</span>`;
+            card.onclick = () => selectStudentByFacility(st);
+            listDiv.appendChild(card);
+        });
+    }
+
+    function selectStudentByFacility(st) {
+        activeStudent = st;
+        document.getElementById('targetStudentDisplay').innerText = `【対象学生: ${st.name} (${st.id})】`;
+        document.getElementById('navJournalBtn').classList.remove('hidden');
+        document.getElementById('navReflectionBtn').classList.remove('hidden');
+        document.getElementById('navEvalBtn').classList.remove('hidden');
+        setupFacilityView();
+        // 前の学生のフォーム内容が残らないよう閉じておく
+        document.getElementById('journalForm').classList.add('hidden');
+        openJournalScreen();
+    }
+
+    function setupStudentView() {
+        document.getElementById('newJournalCard').classList.remove('hidden');
+        document.getElementById('instructorComment').readOnly = true;
+        document.getElementById('post_reflection_overall').readOnly = false;
+        document.getElementById('post_reflection_future').readOnly = false;
+        document.getElementById('reflectionSaveArea').classList.remove('hidden');
+        openJournalScreen();
+    }
+
+    function setupFacilityView() {
+        document.getElementById('newJournalCard').classList.add('hidden');
+        document.getElementById('journalTopGrid').style.gridTemplateColumns = "1fr";
+        document.getElementById('practiceDay').readOnly = true;
+        document.getElementById('attendanceTime').readOnly = true;
+        document.getElementById('exitTime').readOnly = true;
+        document.getElementById('learningGoals').readOnly = true;
+        document.getElementById('reflection').readOnly = true;
+        document.getElementById('tomorrowTasks').readOnly = true;
+        document.getElementById('addActivityBtn').classList.add('hidden');
+
+        document.getElementById('instructorComment').readOnly = false;
+        document.getElementById('instructorComment').style.backgroundColor = "#ffffff";
+
+        document.getElementById('post_reflection_overall').readOnly = true;
+        document.getElementById('post_reflection_future').readOnly = true;
+        document.getElementById('reflectionSaveArea').classList.add('hidden');
+    }
+
+    function showScreen(screenId) {
+        ['facilitySelectScreen', 'adminSelectScreen', 'journalApp', 'reflectionApp', 'evalApp'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+        document.getElementById(screenId).classList.remove('hidden');
+
+        document.getElementById('navJournalBtn').classList.remove('active');
+        document.getElementById('navReflectionBtn').classList.remove('active');
+        document.getElementById('navEvalBtn').classList.remove('active');
+        if (screenId === 'journalApp') document.getElementById('navJournalBtn').classList.add('active');
+        if (screenId === 'reflectionApp') document.getElementById('navReflectionBtn').classList.add('active');
+        if (screenId === 'evalApp') document.getElementById('navEvalBtn').classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    function openJournalScreen() {
+        showScreen('journalApp');
+        if (activeStudent) refreshDateList();
+    }
+
+    async function openReflectionScreen() {
+        if (!activeStudent) return alert("学生が選択されていません");
+        showScreen('reflectionApp');
+        document.getElementById('post_reflection_overall').value = "読み込み中...";
+        document.getElementById('post_reflection_future').value = "読み込み中...";
+        try {
+            const res = await callGAS({ action: "loadPostReflection", studentId: activeStudent.id });
+            if (res.success && res.data) {
+                document.getElementById('post_reflection_overall').value = res.data[2] || "";
+                document.getElementById('post_reflection_future').value = res.data[3] || "";
+            } else {
+                document.getElementById('post_reflection_overall').value = "";
+                document.getElementById('post_reflection_future').value = "";
+            }
+        } catch(e) {
+            document.getElementById('post_reflection_overall').value = "";
+            document.getElementById('post_reflection_future').value = "";
+        }
+    }
+
+    async function openEvaluationScreen() {
+        if (!activeStudent) return alert("学生が選択されていません");
+        showScreen('evalApp');
+        document.getElementById('evaluationForm').reset();
+        try {
+            const res = await callGAS({ action: "loadEvaluation", studentId: activeStudent.id });
+            if (res.success && res.data) {
+                fillEvalForm(res.data);
+            }
+        } catch(e) {}
+        if (currentUser && currentUser.role === 'admin') {
+            document.querySelectorAll('#evaluationForm input, #evaluationForm textarea').forEach(el => {
+                if (el.type === 'radio') el.disabled = true;
+                else el.readOnly = true;
+            });
+        }
+    }
+
+    async function refreshDateList() {
+        const listDiv = document.getElementById('dateList');
+        listDiv.innerHTML = "<div style='padding:10px;'>読み込み中...</div>";
+        try {
+            const res = await callGAS({ action: "getJournalDates", studentId: activeStudent.id });
+            knownDates = (res && res.dates) ? res.dates : [];
+            if (knownDates.length > 0) {
+                listDiv.innerHTML = knownDates.map(d => `
+                    <div class="date-item" data-date="${esc(d)}">
+                        <span>📅 <strong>${esc(d)}</strong></span>
+                        <span style="color:var(--primary-color); font-weight:bold;">開く ></span>
+                    </div>
+                `).join('');
+                listDiv.querySelectorAll('.date-item').forEach(el => {
+                    el.addEventListener('click', () => loadJournalDate(el.dataset.date));
+                });
+            } else {
+                listDiv.innerHTML = "<p style='padding:15px; color:#666; margin:0;'>日誌データはまだありません</p>";
+            }
+        } catch(e) {
+            listDiv.innerHTML = "<p style='padding:15px; color:#dc3545; margin:0;'>読み込みエラー</p>";
+        }
+    }
+
+    function createNewEntry() {
+        const date = document.getElementById('newDate').value;
+        if (!date) return alert("日付を選択してください");
+        // 既に日誌がある日付は、空のフォームで上書きしないよう既存内容を開く
+        if (knownDates.includes(date)) {
+            alert("この日付の日誌は既にあります。保存済みの内容を開きます。");
+            return loadJournalDate(date);
+        }
+        document.getElementById('journalForm').reset();
+        document.getElementById('practiceDate').value = date;
+        document.getElementById('activityContainer').innerHTML = "";
+        addActivityRow();
+        document.getElementById('journalForm').classList.remove('hidden');
+        document.getElementById('journalForm').scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function loadJournalDate(date) {
+        const res = await callGAS({ action: "loadJournal", studentId: activeStudent.id, date });
+        if (res.success) {
+            const d = res.data;
+            document.getElementById('journalForm').classList.remove('hidden');
+            document.getElementById('practiceDay').value = val(d[2]);
+            document.getElementById('practiceDate').value = date;
+            document.getElementById('attendanceTime').value = val(d[4]);
+            document.getElementById('exitTime').value = val(d[5]);
+            document.getElementById('learningGoals').value = val(d[6]);
+
+            const container = document.getElementById('activityContainer');
+            container.innerHTML = "";
+            try {
+                const activities = JSON.parse(d[7]);
+                if (activities.length > 0) {
+                    activities.forEach(a => addActivityRow(val(a.start), val(a.end), val(a.schedule), val(a.action)));
+                } else { addActivityRow(); }
+            } catch(e) { addActivityRow(); }
+
+            document.getElementById('reflection').value = val(d[8]);
+            document.getElementById('tomorrowTasks').value = val(d[9]);
+            document.getElementById('instructorComment').value = val(d[10]);
+            document.getElementById('journalForm').scrollIntoView({ behavior: "smooth" });
+        } else {
+            alert("日誌を読み込めませんでした。" + (res.message ? "\n" + res.message : ""));
+        }
+    }
+
+    function addActivityRow(start="", end="", schedule="", action="") {
+        const rowId = "act_" + Math.random().toString(36).substring(2, 9);
+        const isReadOnly = currentUser && (currentUser.role === 'facility' || currentUser.role === 'admin');
+        const html = `
+            <div class="activity-item" id="${rowId}">
+                ${!isReadOnly ? `<button type="button" class="remove-btn" onclick="document.getElementById('${rowId}').remove()">×</button>` : ''}
+                <div class="activity-header">
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">時間</label>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <input type="time" class="act-start form-control" value="${esc(start)}" ${isReadOnly ? 'readonly' : ''} style="padding:6px;">
+                            <span>～</span>
+                            <input type="time" class="act-end form-control" value="${esc(end)}" ${isReadOnly ? 'readonly' : ''} style="padding:6px;">
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">日程</label>
+                        <input type="text" class="act-sched form-control" value="${esc(schedule)}" ${isReadOnly ? 'readonly' : ''} style="padding:7px;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">行動内容</label>
+                    <textarea class="act-action form-control" ${isReadOnly ? 'readonly' : ''} style="min-height:140px;">${esc(action)}</textarea>
+                </div>
+            </div>
+        `;
+        document.getElementById('activityContainer').insertAdjacentHTML('beforeend', html);
+    }
+
+    document.getElementById('journalForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (currentUser.role === 'admin') return;
+        const btn = document.getElementById('saveJournalBtn');
+        btn.innerText = "保存中..."; btn.disabled = true;
+
+        const activityItems = document.querySelectorAll('.activity-item');
+        const activities = Array.from(activityItems).map(item => ({
+            start: item.querySelector('.act-start').value,
+            end: item.querySelector('.act-end').value,
+            schedule: item.querySelector('.act-sched').value,
+            action: item.querySelector('.act-action').value
+        }));
+
+        const payload = {
+            action: "saveJournal",
+            studentId: activeStudent.id,
+            studentName: activeStudent.name,
+            practiceDay: document.getElementById('practiceDay').value,
+            practiceDate: document.getElementById('practiceDate').value,
+            attendanceTime: document.getElementById('attendanceTime').value,
+            exitTime: document.getElementById('exitTime').value,
+            learningGoals: document.getElementById('learningGoals').value,
+            activities: activities,
+            reflection: document.getElementById('reflection').value,
+            tomorrowTasks: document.getElementById('tomorrowTasks').value,
+            instructorComment: document.getElementById('instructorComment').value
+        };
+
+        try {
+            ensureOk(await callGAS(payload));
+            alert("実習簿を保存・更新しました。");
+            refreshDateList();
+        } catch (err) {
+            alert("保存に失敗しました。" + (err.message ? "\n" + err.message : ""));
+        } finally {
+            btn.innerText = "実習簿を保存・更新"; btn.disabled = false;
+        }
+    };
+
+    document.getElementById('postReflectionForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (currentUser.role !== 'student') return;
+        const btn = document.getElementById('saveReflectionBtn');
+        btn.innerText = "保存中..."; btn.disabled = true;
+
+        const payload = {
+            action: "savePostReflection",
+            studentId: activeStudent.id,
+            studentName: activeStudent.name,
+            overall: document.getElementById('post_reflection_overall').value,
+            future: document.getElementById('post_reflection_future').value
+        };
+
+        try {
+            ensureOk(await callGAS(payload));
+            alert("事後振り返りを保存しました。");
+        } catch(err) {
+            alert("保存に失敗しました。" + (err.message ? "\n" + err.message : ""));
+        } finally {
+            btn.innerText = "事後振り返りを保存・更新"; btn.disabled = false;
+        }
+    };
+
+    function initEvaluationSections() {
+        let html = '';
+        for (let title in evalConfig) {
+            const conf = evalConfig[title];
+            html += `<section class="card"><h2>${title}</h2>`;
+            conf.items.forEach((text, i) => {
+                html += `
+                    <div class="eval-row">
+                        <div style="flex:1; padding-right:15px;">${text}</div>
+                        <div class="radio-group">
+                            ${[5, 4, 3, 2, 1, '非該当'].map(v => `
+                                <label class="score-label">
+                                    <input type="radio" name="${conf.prefix + (i+1)}" value="${v}">
+                                    <br>${v}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `<p style="margin-top:15px; font-weight:bold; font-size:15px;">【所見】</p>
+                     <textarea id="view-${conf.prefix}" class="form-control" style="min-height:180px;"></textarea></section>`;
+        }
+        document.getElementById('evalSectionsContainer').innerHTML = html;
+        document.getElementById('group-E').innerHTML = [5, 4, 3, 2, 1, '非該当'].map(v => `
+            <label class="score-label"><input type="radio" name="E" value="${v}"><br>${v}</label>
+        `).join('');
+    }
+
+    function fillEvalForm(d) {
+        const setVal = (id, v) => { if(document.getElementById(id)) document.getElementById(id).value = v || ""; };
+        setVal('info_type', d[3]);
+        setVal('info_owner', d[4]);
+        setVal('info_facility', d[5]);
+        setVal('info_rep', d[7]);
+        setVal('info_mentor', d[8]);
+        setVal('period_start', d[9]);
+        setVal('period_end', d[10]);
+        if(d[11]) {
+            const r = document.querySelector(`input[name="stay_type"][value="${d[11]}"]`);
+            if(r) r.checked = true;
+        }
+        setVal('days_total', d[12]);
+        setVal('days_absent', d[13]);
+        setVal('days_late', d[14]);
+
+        let col = 18;
+        ['A', 'B', 'C', 'D'].forEach(p => {
+            const count = (p==='A')?4 : (p==='B')?3 : (p==='C')?6 : 5;
+            for(let i=1; i<=count; i++) {
+                const r = document.querySelector(`input[name="${p}${i}"][value="${d[col++]}"]`);
+                if(r) r.checked = true;
+            }
+            setVal(`view-${p}`, d[col++]);
+        });
+        const rE = document.querySelector(`input[name="E"][value="${d[col++]}"]`);
+        if(rE) rE.checked = true;
+        setVal('comment-F', d[col++]);
+        setVal('comment-G', d[col++]);
+    }
+
+    document.getElementById('evaluationForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (currentUser.role !== 'facility') return;
+        const btn = document.getElementById('saveEvalBtn');
+        btn.disabled = true; btn.innerText = "保存中...";
+
+        const formData = [
+            activeStudent.id,
+            activeStudent.name,
+            "ソーシャルワーク実習",
+            document.getElementById('info_type').value,
+            document.getElementById('info_owner').value,
+            document.getElementById('info_facility').value,
+            "",
+            document.getElementById('info_rep').value,
+            document.getElementById('info_mentor').value,
+            document.getElementById('period_start').value,
+            document.getElementById('period_end').value,
+            (document.querySelector('input[name="stay_type"]:checked') || {}).value || "",
+            document.getElementById('days_total').value,
+            document.getElementById('days_absent').value,
+            document.getElementById('days_late').value,
+            "", "", ""
+        ];
+
+        ['A', 'B', 'C', 'D'].forEach(p => {
+            const count = (p==='A')?4 : (p==='B')?3 : (p==='C')?6 : 5;
+            for(let i=1; i<=count; i++) {
+                formData.push((document.querySelector(`input[name="${p}${i}"]:checked`) || {}).value || "");
+            }
+            formData.push(document.getElementById(`view-${p}`).value);
+        });
+        formData.push((document.querySelector('input[name="E"]:checked') || {}).value || "");
+        formData.push(document.getElementById('comment-F').value);
+        formData.push(document.getElementById('comment-G').value);
+
+        try {
+            ensureOk(await callGAS({ action: "saveEvaluation", formData }));
+            alert("実習評価表を保存・更新しました。");
+        } catch(err) {
+            alert("評価データの保存に失敗しました。" + (err.message ? "\n" + err.message : ""));
+        } finally {
+            btn.disabled = false; btn.innerText = "評価表を保存・更新する";
+        }
+    };
+
+    initEvaluationSections();
+</script>
+</body>
+</html>
